@@ -19,7 +19,6 @@ bool checkIfContainsAllNodes(Path path1, Path path2)
         );
         if (it == path2.end())
         {
-            cout << "ID: " << currId << "\n";
             contains = false;
         }
     }
