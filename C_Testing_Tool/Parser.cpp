@@ -190,7 +190,7 @@ void Parser::CODE_BLOCK()
 	getToken();
 	while (currToken.getLexeme() != LEX_RIGHT_BRACE)					// while the closing bracket is not met
 	{
-		OP();															// analyse current operator
+		STMNT();														// analyse current statement
 		if (currToken.getLexeme() == LEX_FIN)							// if the code has ended without closing the code body
 		{
 			syntaxError("Expected '}'", currToken);						//   Syntax error 9
@@ -199,8 +199,8 @@ void Parser::CODE_BLOCK()
 	getToken();
 }
 
-// Single operator analysis
-void Parser::OP()
+// Statement analysis
+void Parser::STMNT()
 {
 	if (isDataType(currToken.getLexeme()))
 	{
@@ -228,7 +228,7 @@ void Parser::OP()
 		if (currToken.getLexeme() == LEX_ASSIGN)							// if the identifier above is being assigned a constant value
 		{
 			getToken();
-			STMNT();
+			EXPR();
 			assignMatchingTypeCheck();
 		}
 		missingSemicolonCheck();
@@ -243,26 +243,26 @@ void Parser::OP()
 			if (currToken.getLexeme() != LEX_LEFT_PAREN)
 			{
 				syntaxError(												// Syntax error 11
-					"In 'if' expression: Expected '(' after 'if'",
+					"In 'if' statement: Expected '(' after 'if'",
+					getNextPosition(prevToken)
+				);
+			}
+			getToken();
+			EXPR();
+			conditionTypeCheck();
+			if (currToken.getLexeme() != LEX_RIGHT_PAREN)
+			{
+				syntaxError(												// Syntax error 12
+					"In 'if' statement: Expected ')'",
 					getNextPosition(prevToken)
 				);
 			}
 			getToken();
 			STMNT();
-			conditionTypeCheck();
-			if (currToken.getLexeme() != LEX_RIGHT_PAREN)
-			{
-				syntaxError(												// Syntax error 12
-					"In 'if' expression: Expected ')'",
-					getNextPosition(prevToken)
-				);
-			}
-			getToken();
-			OP();
 			if (currToken.getLexeme() == LEX_ELSE)
 			{
 				getToken();
-				OP();
+				STMNT();
 			}
 			break;
 
@@ -271,33 +271,33 @@ void Parser::OP()
 			if (currToken.getLexeme() != LEX_LEFT_PAREN)
 			{
 				syntaxError(												// Syntax error 13
-					"In 'while' expression: Expected '(' after 'while'",
+					"In 'while' statement: Expected '(' after 'while'",
 					getNextPosition(prevToken)
 				);
 			}
 			getToken();
-			STMNT();
+			EXPR();
 			conditionTypeCheck();
 
 			if (currToken.getLexeme() != LEX_RIGHT_PAREN)
 			{
 				syntaxError(												// Syntax error 14
-					"In 'while' expression: Expected ')'",
+					"In 'while' statement: Expected ')'",
 					getNextPosition(prevToken)
 				);
 			}
 			getToken();
-			OP();
+			STMNT();
 			break;
 
 		case LEX_DO:														// do { ... } while() loop
 			getToken();
-			OP();
+			STMNT();
 
 			if (currToken.getLexeme() != LEX_WHILE)
 			{
 				syntaxError(												// Syntax error 15
-					"In 'do' expression: Expected 'while'",
+					"In 'do' statement: Expected 'while'",
 					getNextPosition(prevToken)
 				);
 			}
@@ -305,29 +305,23 @@ void Parser::OP()
 			if (currToken.getLexeme() != LEX_LEFT_PAREN)
 			{
 				syntaxError(												// Syntax error 16
-					"In 'do' expression: Expected '(' after 'while'",
+					"In 'do' statement: Expected '(' after 'while'",
 					getNextPosition(prevToken)
 				);
 			}
 			getToken();
-			STMNT();
+			EXPR();
 			conditionTypeCheck();
 
 			if (currToken.getLexeme() != LEX_RIGHT_PAREN)
 			{
 				syntaxError(												// Syntax error 17
-					"In 'do' expression: Expected ')'",
+					"In 'do' statement: Expected ')'",
 					getNextPosition(prevToken)
 				);
 			}
 			getToken();
-			if (currToken.getLexeme() != LEX_SEMICOLON)
-			{
-				syntaxError(												// Syntax error 18
-					"In 'do' expression: Expected ';' after 'while()",
-					getNextPosition(prevToken)
-				);
-			}
+			missingSemicolonCheck();
 			getToken();
 			break;
 
@@ -336,7 +330,7 @@ void Parser::OP()
 			if (currToken.getLexeme() != LEX_LEFT_PAREN)
 			{
 				syntaxError(												// Syntax error 19
-					"In 'for' expression: Expected '(' after 'for'",
+					"In 'for' statement: Expected '(' after 'for'",
 					getNextPosition(prevToken)
 				);
 			}
@@ -345,12 +339,12 @@ void Parser::OP()
 			// for(<analyzing this part>; ...; ...)
 			switch (currToken.getLexeme())
 			{
-			case LEX_SEMICOLON:
+			case LEX_SEMICOLON:												// either empty statement
 				getToken();
 				break;
 
 			default:
-				OP_STMNT();													// or a statement operator
+				ASSIGN();													// or an assignment statement
 				break;
 			}
 
@@ -361,12 +355,12 @@ void Parser::OP()
 			}
 			else
 			{
-				STMNT();
+				EXPR();
 				conditionTypeCheck();
 				if (currToken.getLexeme() != LEX_SEMICOLON)
 				{
 					syntaxError(											// Syntax error 20
-						"In 'for' expression: Expected ';' between last two statements",
+						"In 'for' statement: Expected ';' between last two statements",
 						currToken
 					);
 				}
@@ -380,17 +374,17 @@ void Parser::OP()
 			}
 			else
 			{
-				STMNT();
+				EXPR();
 				if (currToken.getLexeme() != LEX_RIGHT_PAREN)
 				{
 					syntaxError(											// Syntax error 21
-						"In 'for' expression: Expected ')'",
+						"In 'for' statement: Expected ')'",
 						getNextPosition(prevToken)
 					);
 				}
 				getToken();
 			}
-			OP();
+			STMNT();
 			break;
 
 		case LEX_SCANF:														// scanf() operator
@@ -398,7 +392,7 @@ void Parser::OP()
 			if (currToken.getLexeme() != LEX_LEFT_PAREN)
 			{
 				syntaxError(												// Syntax error 22
-					"In 'scanf' expression: Expected '(' after 'scanf'",
+					"In 'scanf' statement: Expected '(' after 'scanf'",
 					getNextPosition(prevToken)
 				);
 			}
@@ -406,7 +400,7 @@ void Parser::OP()
 			if (currToken.getLexeme() != LEX_QUOTE_DOUBLE)
 			{
 				syntaxError(												// Syntax error 23
-					"In 'scanf' expression: Expected string constant as format",
+					"In 'scanf' statement: Expected string constant as format",
 					currToken
 				);
 			}
@@ -423,7 +417,7 @@ void Parser::OP()
 				if (currToken.getLexeme() != LEX_COMMA)
 				{
 					syntaxError(											// Syntax error 24
-						"In 'scanf' expression: Expected ','",
+						"In 'scanf' statement: Expected ','",
 						getNextPosition(prevToken)
 					);
 				}
@@ -434,7 +428,7 @@ void Parser::OP()
 				if (currLex != LEX_ID)
 				{
 					syntaxError(											// Syntax error 24
-						"In 'scanf' expression: Expected variable of matching type",
+						"In 'scanf' statement: Expected variable of matching type",
 						currToken
 					);
 				}
@@ -442,7 +436,7 @@ void Parser::OP()
 				if (currLex != inputVarType)
 				{
 					syntaxError(											// Syntax error 25
-						"In 'scanf' expression: Input arguement " + to_string(count) + " has a wrong format",
+						"In 'scanf' statement: Input argument " + to_string(count) + " has a wrong format",
 						currToken
 					);
 				}
@@ -452,7 +446,7 @@ void Parser::OP()
 			if (currToken.getLexeme() != LEX_RIGHT_PAREN)
 			{
 				syntaxError(												// Syntax error 26
-					"In 'scanf' expression: Expected ')'",
+					"In 'scanf' statement: Expected ')'",
 					getNextPosition(prevToken)
 				);
 			}
@@ -468,7 +462,7 @@ void Parser::OP()
 			if (currToken.getLexeme() != LEX_LEFT_PAREN)
 			{
 				syntaxError(												// Syntax error 27
-					"In " + expr + " expression: Expected '(' after " + expr,
+					"In '" + expr + "' statement: Expected '(' after '" + expr + "'",
 					getNextPosition(prevToken)
 				);
 			}
@@ -476,14 +470,14 @@ void Parser::OP()
 			if (currToken.getLexeme() == LEX_RIGHT_PAREN)
 			{
 				syntaxError(												// Syntax error 28
-					"In " + expr + " expression: No arguements found",
+					"In '" + expr + "' statement: No arguments found",
 					currToken
 				);
 			}
 			else if (currToken.getLexeme() != LEX_QUOTE_DOUBLE)
 			{
 				syntaxError(												// Syntax error 29
-					"In " + expr + " expression: Expected string constant as format",
+					"In '" + expr + "' statement: Expected string constant as format",
 					currToken
 				);
 			}
@@ -500,7 +494,7 @@ void Parser::OP()
 				if (currToken.getLexeme() != LEX_COMMA)
 				{
 					syntaxError(											// Syntax error 30
-						"In " + expr + " expression: Expected ','",
+						"In '" + expr + "' statement: Expected ','",
 						getNextPosition(prevToken)
 					);
 				}
@@ -511,7 +505,7 @@ void Parser::OP()
 				if (currLex != LEX_ID)
 				{
 					syntaxError(											// Syntax error 31
-						"In " + expr + " expression: Expected variable of matching type",
+						"In '" + expr + "' statement: Expected variable of matching type",
 						currToken
 					);
 				}
@@ -519,7 +513,7 @@ void Parser::OP()
 				if (currLex != inputVarType)
 				{
 					syntaxError(											// Syntax error 32
-						"In " + expr + "expression: Input arguement " + to_string(count) + " has a wrong format",
+						"In '" + expr + "' statement: Input argument " + to_string(count) + " has a wrong format",
 						currToken
 					);
 				}
@@ -529,7 +523,7 @@ void Parser::OP()
 			if (currToken.getLexeme() != LEX_RIGHT_PAREN)
 			{
 				syntaxError(												// Syntax error 33
-					"In " + expr + " expression: Expected ')'",
+					"In '" + expr + "' statement: Expected ')'",
 					getNextPosition(prevToken)
 				);
 			}
@@ -547,10 +541,7 @@ void Parser::OP()
 			getToken();
 			FIN();
 			returnCheck();
-			if (currToken.getLexeme() != LEX_SEMICOLON)
-			{
-				syntaxError("Expected ';'", getNextPosition(prevToken));	// Syntax error 34
-			}
+			missingSemicolonCheck();
 			getToken();
 			break;
 
@@ -558,19 +549,19 @@ void Parser::OP()
 			getToken();
 			break;
 
-		default:															// Statement operator
-			OP_STMNT();
+		default:															// Assignment statement
+			ASSIGN();
 			break;
 		}
 	}
 }
 
-// Statement operator analysis
-void Parser::OP_STMNT()
+// Assignment statement analysis
+void Parser::ASSIGN()
 {
 	if (currToken.getLexeme() != LEX_ID)
 	{
-		STMNT();
+		EXPR();
 	}
 	else
 	{
@@ -582,23 +573,23 @@ void Parser::OP_STMNT()
 			currToken.getLexeme() == LEX_ASSIGN ||
 			currToken.getLexeme() >= LEX_PLUS_ASSIGN && currToken.getLexeme() <= LEX_SLASH_ASSIGN
 			) {
-			lexer.tables.ids[idTableIndex].setUse(idPos.lineNum);		// DEFINE!!!
+			lexer.tables.ids[idTableIndex].setUse(idPos.lineNum);
 			getToken();
-			STMNT();
+			EXPR();
 			assignMatchingTypeCheck();
 		}
 		else
 		{
 			ungetToken();
-			STMNT();
+			EXPR();
 		}
 	}
 	missingSemicolonCheck();
 	getToken();
 }
 
-// Statement analysis
-void Parser::STMNT()
+// Expression analysis
+void Parser::EXPR()
 {
 	DISJ();
 	if (																// if the current operation is assignment:
@@ -719,7 +710,7 @@ void Parser::FIN()
 		if (currToken.getLexeme() != LEX_ID)
 		{
 			syntaxError(													// Syntax error 36
-				"Lvalue requied as an increment operand",
+				"Lvalue required as an increment operand",
 				currToken
 			);
 		}
@@ -748,7 +739,7 @@ void Parser::FIN()
 
 	case LEX_LEFT_PAREN:
 		getToken();
-		STMNT();
+		EXPR();
 		if (currToken.getLexeme() != LEX_RIGHT_PAREN)
 		{
 			syntaxError("Expected ')'", getNextPosition(prevToken));		// Syntax error 37
@@ -802,7 +793,7 @@ void Parser::idsUsedCheck()
 		if (id.isDeclared() && !id.isUsed())
 		{
 			semanticWarning(
-				"Variable \"" + id.getName() + "\" declared but not used"
+				"Variable '" + id.getName() + "' declared but not used"
 			);
 		}
 	}
@@ -936,7 +927,10 @@ void Parser::returnCheck()
 	lexeme valueType = tokenStack.top();
 	if (valueType != funcType)
 	{
-		semanticError("Returning a value of a wrong type", currToken);
+		semanticError(
+			"Data type of the returned value does not match the function type",
+			currToken
+		);
 	}
 }
 
@@ -971,39 +965,6 @@ void Parser::missingSemicolonCheck()
 	}
 }
 
-// Highlight specific lexeme in a code line
-string Parser::highlightError(Token token)
-{
-	ifstream code(fileName);
-	string codeLine;
-
-	auto lineNum = token.getStartPosition().lineNum;
-	auto lexStart = token.getStartPosition().colNum;
-	auto lexEnd = token.getEndPosition().colNum;
-
-	cout << "start: " << lexStart << "  end: " << lexEnd << "\n";
-
-	for (int i = 0; i < lineNum; i++)
-	{
-		getline(code, codeLine);
-	}
-
-	string highlight = "^";
-	highlight.insert(0, lexStart - 1, ' ');
-	int lexLength = lexEnd - lexStart - 1;
-	if (lexLength > 0)
-	{
-		highlight.insert(highlight.length(), lexLength, '~');
-	}
-
-	string lineNumStr = to_string(lineNum);
-	string margin = "";
-	margin.insert(0, lineNumStr.length(), ' ');
-
-
-	return lineNumStr + " | " + codeLine + "\n" + margin + " | " + highlight + "\n";
-}
-
 // Syntax error processing
 void Parser::syntaxError(string err, Token errToken)
 {
@@ -1017,7 +978,7 @@ void Parser::syntaxError(string err, Token errToken)
 		auto errColNum = errToken.getStartPosition().colNum;
 		cout << fileName << ":" << errLineNum << ":" << errColNum
 			<< ": Syntax error: " << s << "\n" << highlightError(errToken) << "\n";
-		getch();
+		_getch();
 		exit(1);
 	}
 }
@@ -1052,6 +1013,37 @@ void Parser::semanticWarning(string wrn)
 	}
 }
 
+// Highlight specific lexeme in a code line
+string Parser::highlightError(Token token)
+{
+	ifstream code(fileName);
+	string codeLine;
+
+	auto lineNum = token.getStartPosition().lineNum;
+	auto lexStart = token.getStartPosition().colNum;
+	auto lexEnd = token.getEndPosition().colNum;
+
+	for (int i = 0; i < lineNum; i++)
+	{
+		getline(code, codeLine);
+	}
+
+	string highlight = "^";
+	highlight.insert(0, lexStart - 1, ' ');
+	int lexLength = lexEnd - lexStart - 1;
+	if (lexLength > 0)
+	{
+		highlight.insert(highlight.length(), lexLength, '~');
+	}
+
+	string lineNumStr = to_string(lineNum);
+	string margin = "";
+	margin.insert(0, lineNumStr.length(), ' ');
+
+
+	return lineNumStr + " | " + codeLine + "\n" + margin + " | " + highlight + "\n";
+}
+
 // Constructor
 Parser::Parser(string name) : fileName(name), lexer(name)
 {
@@ -1069,7 +1061,7 @@ parserResults Parser::analyze()
 
 	if (semErrorCount > 0)
 	{
-		getch();
+		_getch();
 		exit(1);
 	}
 

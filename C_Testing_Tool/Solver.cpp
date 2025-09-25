@@ -226,7 +226,7 @@ void Solver::solveAssign(const std::vector<Token>& code, int& index, lexeme& typ
                 break;
 
             case LEX_CHAR:
-                sym.setExpr(idVal, sym.ctx.string_val(DEFAULT_CHAR_VALUE));
+                //sym.setExpr(idVal, sym.ctx.string_val(DEFAULT_CHAR_VALUE));
                 break;
             }
             break;

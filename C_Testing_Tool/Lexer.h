@@ -74,6 +74,9 @@ private:
 	// Lexical error processing
 	void lexicalError(string err);
 
+	// Highlight error in a code line
+	string highlightError(Position errStart, Position errEnd);
+
 public:
 	Lexer(const string name);
 

@@ -31,17 +31,18 @@ struct parserResults
  * Function parameter:		PARAM		--> [int | float | double | char | char* | bool] ID [ | = CONST]
  * Constant parameter		CONST		--> number | 'char_constant' | "string_constant" | true | false
  *
- * Operations				CODE_BLOCK	--> <OP>
- * Operation				OP			--> DESCS | OP_STMNT | CODE_BLOCK | if (STMNT) OP <else OP> | while (STMNT) OP |
- * 										 for ([STMNT]; [STMNT]; [STMNT]) OP | scanf(ID); | printf(STMNT <, STMNT>); | return [ | id_name];
- * Statement operator		OP_STMNT	--> STMNT | ID = STMNT;
- * Statement				STMNT		--> DISJ
+ * Operations				CODE_BLOCK	--> { <STMNT> }
+ * Operation				STMNT		--> ASSIGN | CODE_BLOCK | if (EXPR) OP <else OP> | while (EXPR) OP |
+ * 											for ([ASSIGN]; [EXPR]; [ASSIGN]) OP | scanf("string_constant", id_name); |
+ *											[print | printf]("string_constant", id_name <, id_name>); | return [ | id_name];
+ * Statement operator		ASSIGN		--> EXPR | ID = EXPR;
+ * Statement				EXPR		--> DISJ
  * Disjunction				DISJ		--> CONJ <|| CONJ>
  * Conjunction				CONJ		--> CMP <&& CMP>
  * Comparison				CMP			--> ADD | ADD [ == | < | > | <= | >= | != ] ADD
  * Additive state			ADD			--> MULTI <[ + | - ] MULTI>
  * Multiplicative state		MULTI		--> FIN <[ * | / | % ] FIN>
- * Final state 				FIN			--> id_name [ | [ ++ | -- ]] | [ ++ | -- ] id_name | CONST | [ + | - ] FIN | !FIN | (STMNT)
+ * Final state 				FIN			--> id_name [ | [ ++ | -- ]] | [ ++ | -- ] id_name | CONST | [ + | - ] FIN | !FIN | (EXPR)
  */
 
 
@@ -77,9 +78,9 @@ class Parser
 	void PARAM();														// Description of function parameters											
 
 	void CODE_BLOCK();													// Code block
-	void OP();															// Operator
-	void OP_STMNT();													// Statement operator
 	void STMNT();														// Statement
+	void ASSIGN();														// Assignment statement
+	void EXPR();														// Expression
 	void DISJ();														// Disjunction
 	void CONJ();														// Conjunction
 	void CMP();															// Comparison
@@ -107,9 +108,6 @@ class Parser
 
 	void missingSemicolonCheck();
 
-	// Highlight error in a code line
-	string highlightError(Token token);
-
 	// Syntax error processing
 	void syntaxError(string err, Token errToken);
 
@@ -118,6 +116,9 @@ class Parser
 
 	// Semantic warning processing
 	void semanticWarning(string wrn);
+
+	// Highlight error in a code line
+	string highlightError(Token token);
 
 public:
 	Parser(string name);

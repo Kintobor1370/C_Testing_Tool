@@ -144,9 +144,7 @@ void CoverageAnalyzer::C0()
         }
     }
     double coverageRate = 100.0 * visitedNodes.size() / cfg.nodes.size();
-    cout << fixed << setprecision(2)
-        << "Coverage Report:\n"
-        << " Statement coverage: " << coverageRate << "%\n";
+    cout << fixed << setprecision(2) << "Statement coverage: " << coverageRate << "%\n";
 
     vector<Model> testModels;
     for (int i = 0; i < testCases.size(); i++)
@@ -160,9 +158,10 @@ void CoverageAnalyzer::C0()
         testModels.push_back(model);
     }
     printTable(testModels);
+	cout << "Result: ";
     if (coverageRate == 100.0)
     {
-        cout << "Full coverage!";
+        cout << "Full coverage!\n";
     }
     else
     {
@@ -212,13 +211,11 @@ void CoverageAnalyzer::C1()
         }
     }
     double coverageRate = 100.0 * visitedBranches.size() / edges.size();
-    cout << fixed << setprecision(2)
-        << "Coverage Report:\n"
-        << "  Branch coverage " << coverageRate << "%\n";
+    cout << fixed << setprecision(2) << "Branch coverage " << coverageRate << "%\n";
     printTable(testModels);
     if (coverageRate == 100.0)
     {
-        cout << "Full coverage!";
+        cout << "Full coverage!\n";
     }
 }
 

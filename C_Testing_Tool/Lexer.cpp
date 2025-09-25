@@ -81,7 +81,7 @@ void Lexer::openFile(const string fileName)
 	if (!f.is_open())
 	{
 		cout << "ERROR: could not open file " + fileName + "\n";
-		getch();
+		_getch();
 		exit(1);
 	}
 }
@@ -162,11 +162,16 @@ void Lexer::lexicalError(string err)
 	}
 	catch (string token)
 	{
+		auto errStart = lexStart;
+		auto errEnd = lexEnd;
 		string errMsg;
 		switch (token[0])
 		{
 		case '\\':
 			errMsg = "Unknown escape sequence: \'" + token + "\'";
+			errStart = errEnd;
+			errStart.colNum--;
+			errEnd.colNum += token.length() - 1;
 			break;
 
 		case '\'': case '\"':
@@ -180,10 +185,41 @@ void Lexer::lexicalError(string err)
 		default:
 			break;
 		}
-		cout << fileName << ":" << currPos.lineNum << ":" << currPos.colNum << ": Lexical error: " << errMsg << "\n";
-		getch();
+		cout << fileName << ":" << currPos.lineNum << ":" << currPos.colNum
+			<< ": Lexical error: " << errMsg << "\n" << highlightError(errStart, errEnd) << "\n";
+		_getch();
 		exit(1);
 	}
+}
+
+string Lexer::highlightError(Position errStart, Position errEnd)
+{
+	ifstream code(fileName);
+	string codeLine;
+
+	auto lineNum = errStart.lineNum;
+	auto startCol = errStart.colNum;
+	auto endCol = errEnd.colNum;
+
+	for (int i = 0; i < lineNum; i++)
+	{
+		getline(code, codeLine);
+	}
+
+	string highlight = "^";
+	highlight.insert(0, startCol - 1, ' ');
+	int lexLength = endCol - startCol - 1;
+	if (lexLength > 0)
+	{
+		highlight.insert(highlight.length(), lexLength, '~');
+	}
+
+	string lineNumStr = to_string(lineNum);
+	string margin = "";
+	margin.insert(0, lineNumStr.length(), ' ');
+
+
+	return lineNumStr + " | " + codeLine + "\n" + margin + " | " + highlight + "\n";
 }
 
 Lexer::Lexer(const string name) : fileName(name)

@@ -26,15 +26,26 @@ class UserInterface
     const string GREETINGS_MSG = "   Welcome to the C Code Testing Tool   \n";
     const string SELECT_MSG = "Please select an option:\n";
     const string HINT_MSG = "\nHint: Navigate with up arrow & down arrow\n      Press ENTER to confirm\n      Press ESC to quit\n";
-    const string ENTER_FILENAME_MSG = "Please navigate to the \'Tests\' folder, place your C code file there and enter the file name.\n";// "\nPress ENTER to confirm and start the experiment\nPress ESC to quit\n";
+    const string ENTER_FILENAME_MSG = "Please navigate to the \'Tests\' folder,\nplace your C code file there and enter the file name.\n";
+	const string TEST_START_MSG = "Testing started...\n";
+	const string TEST_END_MSG = "Testing completed.\nPress any key to return to the main menu.\nPress ESC to quit.\n";
+	const string LEX_NO_ERR_MSG = "No lexical errors. Well done!\n";
+	const string LEX_SYN_SEM_NO_ERR_MSG = "No lexical, syntax or semantic errors. Way to go!\n";
+    const string NO_TEST_MSG = "ERROR: This test is unavailable.\n";
 
     const string filePath = "..\\Tests\\";
     string fileName;
     string fullFileName;
 
+	vector<string> supportedExtensions = { "c" };
+
     void displayMenu();
     void goUp();
     void goDown();
+    
+	string getExtension();
+	bool isExtensionSupported();
+	bool fileOpens();
 
 public:
     UserInterface(vector<string> options);
