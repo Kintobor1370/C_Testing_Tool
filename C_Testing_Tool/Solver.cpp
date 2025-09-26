@@ -69,16 +69,16 @@ void SymbolicContext::setExpr(int val, expr newExpr)
 }
 
 
-//.........................Z3 MODEL CLASS
+//.........................TEST CASE CLASS
 
-// Constructor for infeasible model
-Model::Model()
+// Constructor for infeasible test case
+TestCase::TestCase()
 {
     sat = false;
 }
 
-// Constructor for feasible model
-Model::Model(std::vector<Identifier> funcParams, expr_vector evals, expr returnVal) : ids(funcParams)
+// Constructor for feasible test case
+TestCase::TestCase(std::vector<Identifier> funcParams, expr_vector evals, expr returnVal) : ids(funcParams)
 {
     sat = true;
     for (int i = 0; i < ids.size(); i++)
@@ -88,32 +88,32 @@ Model::Model(std::vector<Identifier> funcParams, expr_vector evals, expr returnV
     output = returnVal.simplify().to_string();
 }
 
-// Get model feasibility
-bool Model::isFeasible()
+// Get test case feasibility
+bool TestCase::isFeasible()
 {
     return sat;
 }
 
 // Get number of input variables
-int Model::getSize()
+int TestCase::getSize()
 {
     return values.size();
 }
 
 // Get identifier
-Identifier Model::getId(int index)
+Identifier TestCase::getId(int index)
 {
     return ids.at(index);
 }
 
 // Get value of the identifier
-string Model::getIdValue(int index)
+string TestCase::getIdValue(int index)
 {
     return values.at(index);
 }
 
 // Get the function output
-string Model::getOutput()
+string TestCase::getOutput()
 {
     return output;
 }
@@ -244,7 +244,6 @@ expr Solver::solveCondition(const std::vector<Token>& cnd)
     {
         cndExpr = STMNT(cnd, index, type);
     }
-    //cout << "CND: " << cndExpr << "\n";
     return cndExpr;
 }
 
@@ -265,7 +264,7 @@ void Solver::solveLoop(const Path& path, solver& solver, int& currNodeIndex)
     {
         loopEndIndex = distance(path.begin(), it);
     }
-    cout << "Loop Start Node: " << loopStartNodeId << "\nLoop End Index: " << loopEndIndex << "\n";
+    //cout << "Loop Start Node: " << loopStartNodeId << "\nLoop End Index: " << loopEndIndex << "\n";
     if (loopEndIndex > 0)
     {
         int loopIter = 0;
@@ -278,14 +277,16 @@ void Solver::solveLoop(const Path& path, solver& solver, int& currNodeIndex)
         solver.pop();                                   // erase temporary expression
 
         Path loopBodyPath{};
+        /*
         cout << "Loop body: ";
         for (int k = currNodeIndex + 1; k < loopEndIndex; k++)
         {
             loopBodyPath.push_back(path.at(k));
             cout << loopBodyPath.at(k - currNodeIndex - 1).id << "  ";
         }
-        currNodeIndex = loopEndIndex;
         cout << "\n";
+        */
+        currNodeIndex = loopEndIndex;
         while (loopIter < maxIterForLoops && loopCondSat)
         {
             bool debug = false;
@@ -551,7 +552,7 @@ void Solver::setMaxIterForLoops(int newMaxIter)
     maxIterForLoops = newMaxIter;
 }
 
-Model Solver::evaluatePathConstraints(const Path& path, solver& solver, bool debugPrint = false)
+TestCase Solver::evaluatePathConstraints(const Path& path, solver& solver, bool debugPrint = false)
 {
     expr returnVal = sym.ctx.int_val(DEFAULT_NUM_VALUE);
     for (int i = 0; i < path.size(); i++)
@@ -771,7 +772,7 @@ Model Solver::evaluatePathConstraints(const Path& path, solver& solver, bool deb
 
         if (isSat)
         {
-            std::cout << "  Model:\n";
+            std::cout << "  Test case:\n";
             for (int i = 0; i < evalVec.size(); i++)
             {
                 string evalStr = evalVec[i].to_string();
@@ -792,13 +793,13 @@ Model Solver::evaluatePathConstraints(const Path& path, solver& solver, bool deb
                 inputVars.push_back(id);
             }
         }
-        return Model(
+        return TestCase(
             inputVars,
             evalVec,
             returnVal
         );
     }
-    return Model();
+    return TestCase();
 }
 
 void Solver::debugPrintPaths()
@@ -829,19 +830,19 @@ void Solver::checkAllPaths(bool debug = false)
     for (auto& path : paths)
     {
         solver z3Solver(sym.ctx);
-        Model res = evaluatePathConstraints(path, z3Solver, debug);
-        models.push_back(res);
+        TestCase newTestCase = evaluatePathConstraints(path, z3Solver, debug);
+        testSuite.push_back(newTestCase);
         sym.resetVars(ids);
     }
 }
 
-std::vector<std::pair<Path, Model>> Solver::getPathsAndModels()
+std::vector<std::pair<Path, TestCase>> Solver::getPathsAndCases()
 {
-    std::vector<std::pair<Path, Model>> pathsAndModels;
+    std::vector<std::pair<Path, TestCase>> pathsAndModels;
     checkAllPaths();
     for (int i = 0; i < paths.size(); i++)
     {
-        pathsAndModels.push_back(std::make_pair(paths.at(i), models.at(i)));
+        pathsAndModels.push_back(std::make_pair(paths.at(i), testSuite.at(i)));
     }
     return pathsAndModels;
 }

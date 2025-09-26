@@ -11,7 +11,7 @@ class CoverageAnalyzer
 {
     CFG cfg;
     vector<Identifier> ids;
-    vector<pair<Path, Model>> pathsAndModelsTable;
+    vector<pair<Path, TestCase>> pathsAndCasesTable;
     unordered_set<int> visitedNodes;
     vector<pair<int, int>> visitedBranches;
 
@@ -25,7 +25,7 @@ class CoverageAnalyzer
     void C1();
 
     // Print table of coverage analysis results
-    void printTable(vector<Model> testModels);
+    void printTable(vector<TestCase> testSuite);
 
 public:
     CoverageAnalyzer(string fileName, int maxIterForLoops = 10000);

@@ -33,8 +33,8 @@ struct SymbolicContext
     void setExpr(int val, expr newExpr);
 };
 
-// Z3 Model class
-class Model
+// Test case class
+class TestCase
 {
     bool sat;
     std::vector<Identifier> ids;
@@ -42,9 +42,9 @@ class Model
     std::string output;
 
 public:
-    Model();
+    TestCase();
 
-    Model(
+    TestCase(
         std::vector<Identifier> funcParams,
         expr_vector evals,
         expr returnVar
@@ -68,7 +68,7 @@ class Solver
     SymbolicContext sym;
     std::vector<Identifier> ids;
     std::vector<Path> paths;
-    std::vector<Model> models;
+    std::vector<TestCase> testSuite;
     std::vector <std::pair<int, lexeme>> unaryOpTable;
     int maxIterForLoops;
 
@@ -91,7 +91,7 @@ class Solver
     void checkUnaryOperation(const std::vector<Token>& line, int& currIndex, lexeme& currType, int idValue);
     void executeUnaryOperations();
 
-    Model evaluatePathConstraints(const Path& path, solver& solver, bool debugPrint);
+    TestCase evaluatePathConstraints(const Path& path, solver& solver, bool debugPrint);
     void debugPrintPaths();
 
 public:
@@ -101,7 +101,7 @@ public:
 
     void checkAllPaths(bool debug);
 
-    std::vector<std::pair<Path, Model>> getPathsAndModels();
+    std::vector<std::pair<Path, TestCase>> getPathsAndCases();
 };
 
 #endif

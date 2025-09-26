@@ -104,10 +104,10 @@ void CoverageAnalyzer::C0()
     }
 
     vector<pair<int, Path>> testCases;
-    for (int tableIndex = 0; tableIndex < pathsAndModelsTable.size(); tableIndex++)
+    for (int tableIndex = 0; tableIndex < pathsAndCasesTable.size(); tableIndex++)
     {
-        auto currPath = pathsAndModelsTable.at(tableIndex).first;
-        bool isFeasible = pathsAndModelsTable.at(tableIndex).second.isFeasible();
+        auto currPath = pathsAndCasesTable.at(tableIndex).first;
+        bool isFeasible = pathsAndCasesTable.at(tableIndex).second.isFeasible();
         if (isFeasible)
         {
             // Check if the current path contains all nodes of an existing test case
@@ -146,18 +146,18 @@ void CoverageAnalyzer::C0()
     double coverageRate = 100.0 * visitedNodes.size() / cfg.nodes.size();
     cout << fixed << setprecision(2) << "Statement coverage: " << coverageRate << "%\n";
 
-    vector<Model> testModels;
+    vector<TestCase> testSuite;
     for (int i = 0; i < testCases.size(); i++)
     {
         int k = 0;
-        while (!checkEqualPaths(pathsAndModelsTable.at(k).first, testCases.at(i).second))
+        while (!checkEqualPaths(pathsAndCasesTable.at(k).first, testCases.at(i).second))
         {
             k++;
         }
-        auto model = pathsAndModelsTable.at(k).second;
-        testModels.push_back(model);
+        auto model = pathsAndCasesTable.at(k).second;
+        testSuite.push_back(model);
     }
-    printTable(testModels);
+    printTable(testSuite);
 	cout << "Result: ";
     if (coverageRate == 100.0)
     {
@@ -183,12 +183,12 @@ void CoverageAnalyzer::C1()
     }
 
     visitedBranches = {};
-    vector<Model> testModels;
-    for (auto& entry : pathsAndModelsTable)
+    vector<TestCase> testSuite;
+    for (auto& entry : pathsAndCasesTable)
     {
         auto currPath = entry.first;
-        auto model = entry.second;
-        if (model.isFeasible())
+        auto testCase = entry.second;
+        if (testCase.isFeasible())
         {
             for (int i = 0; i < currPath.size() - 1; i++)
             {
@@ -207,12 +207,12 @@ void CoverageAnalyzer::C1()
                     visitedBranches.push_back(make_pair(node.id, nextNode.id));
                 }
             }
-            testModels.push_back(model);
+            testSuite.push_back(testCase);
         }
     }
     double coverageRate = 100.0 * visitedBranches.size() / edges.size();
     cout << fixed << setprecision(2) << "Branch coverage " << coverageRate << "%\n";
-    printTable(testModels);
+    printTable(testSuite);
     if (coverageRate == 100.0)
     {
         cout << "Full coverage!\n";
@@ -220,7 +220,7 @@ void CoverageAnalyzer::C1()
 }
 
 // Print table of coverage analysis results
-void CoverageAnalyzer::printTable(vector<Model> testModels)
+void CoverageAnalyzer::printTable(vector<TestCase> testSuite)
 {
     vector<vector<string>> table;
 
@@ -232,16 +232,16 @@ void CoverageAnalyzer::printTable(vector<Model> testModels)
     table.push_back(header);
     int caseNum = 1;
 
-    for (auto model : testModels)                               // Add data from test models to table
+    for (auto testCase : testSuite)                               // Add data from test suite to table
     {
         vector<string> row{ to_string(caseNum) };
         string inputParams;
-        for (int i = 0; i < model.getSize(); i++)
+        for (int i = 0; i < testCase.getSize(); i++)
         {
-            inputParams = inputParams + model.getId(i).getName() + " = " + model.getIdValue(i) + "; ";
+            inputParams = inputParams + testCase.getId(i).getName() + " = " + testCase.getIdValue(i) + "; ";
         }
         row.push_back(inputParams);
-        row.push_back(model.getOutput());
+        row.push_back(testCase.getOutput());
         table.push_back(row);
         caseNum++;
     }
@@ -312,11 +312,11 @@ CoverageAnalyzer::CoverageAnalyzer(string fileName, int maxIterForLoops)
     cfg = builder.buildCFG();
 
     Solver solver(cfg, ids);
-    pathsAndModelsTable = solver.getPathsAndModels();                   // Import all paths and models from the SMT solver
+    pathsAndCasesTable = solver.getPathsAndCases();                     // Import all paths and models from the SMT solver
     std::sort(                                                          // Sort them by path length    
-        pathsAndModelsTable.begin(),
-        pathsAndModelsTable.end(),
-        [](pair<Path, Model> entry1, pair<Path, Model> entry2)
+        pathsAndCasesTable.begin(),
+        pathsAndCasesTable.end(),
+        [](pair<Path, TestCase> entry1, pair<Path, TestCase> entry2)
         {
             auto entry1Path = entry1.first;
             auto entry2Path = entry2.first;
