@@ -81,9 +81,19 @@ TestCase::TestCase()
 TestCase::TestCase(std::vector<Identifier> funcParams, expr_vector evals, expr returnVal) : ids(funcParams)
 {
     sat = true;
-    for (int i = 0; i < ids.size(); i++)
+    if (evals.size() == 0)
     {
-        values.push_back(evals[i].to_string());
+        for (int i = 0; i < ids.size(); i++)
+        {
+            values.push_back("Any value");
+        }
+    }
+    else
+    {
+        for (int i = 0; i < ids.size(); i++)
+        {
+            values.push_back(evals[i].to_string());
+        }
     }
     output = returnVal.simplify().to_string();
 }
@@ -748,6 +758,7 @@ TestCase Solver::evaluatePathConstraints(const Path& path, solver& solver, bool 
 
     expr_vector varsVec(sym.ctx);
     expr_vector evalVec(sym.ctx);
+    
     if (isSat)
     {
         for (int i = 0; i < solver.get_model().size(); i++)
