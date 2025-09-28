@@ -54,7 +54,7 @@ vector<lexeme> Parser::extractFromStringConst(string str_cnst)
 				break;
 
 			default:
-				syntaxError(											// Syntax error 1
+				syntaxError(											// Output syntax error 1
 					"Unknown data type '%" + string(1, str_cnst[i + 1]) + "'",
 					prevToken
 				);
@@ -88,13 +88,13 @@ void Parser::FUNC_HEADER()
 {
 	if (!isFuncType(currToken.getLexeme()))								// if first lexeme is not the function's data type:
 	{
-		syntaxError("Expected function type", currToken);				// Syntax error 2
+		syntaxError("Expected function type", currToken);				// Syntax error 1
 	}
 	funcType = currToken.getLexeme();
 	getToken();															//   get next lexeme
 	if (currToken.getLexeme() != LEX_ID)								// if the next lexeme is not an identifier
 	{
-		syntaxError("Expected function name", currToken);				// Syntax error 3
+		syntaxError("Expected function name", currToken);				// Syntax error 2
 	}
 	int idTableIndex = currToken.getValue();
 	lexer.tables.ids[idTableIndex].setIdType(FUNCTION);
@@ -102,7 +102,7 @@ void Parser::FUNC_HEADER()
 	getToken();
 	if (currToken.getLexeme() != LEX_LEFT_PAREN)
 	{
-		syntaxError(													// Syntax error 4
+		syntaxError(													// Syntax error 3
 			"Expected '('",
 			getNextPosition(prevToken)
 		);
@@ -137,7 +137,7 @@ void Parser::PARAM()
 	getToken();
 	if (currToken.getLexeme() != LEX_ID)								// if the lexeme is not an identifier:	
 	{
-		syntaxError(													//   Syntax error 5
+		syntaxError(													//   Syntax error 4
 			"Expected variable name",
 			getNextPosition(prevToken)
 		);
@@ -146,7 +146,7 @@ void Parser::PARAM()
 	int idTableIndex = currToken.getValue();
 	if (lexer.tables.ids[idTableIndex].isDeclared())
 	{
-		semanticError(
+		semanticError(													// Semantic error 1
 			"Variable '" + lexer.tables.ids[idTableIndex].getName() + "' has already been declared",
 			currToken
 		);
@@ -159,16 +159,16 @@ void Parser::PARAM()
 		getToken();
 		if (!isLiteral(currToken.getLexeme()))
 		{
-			syntaxError("Expected a constant value", currToken);		// Syntax error 6
+			syntaxError("Expected a constant value", currToken);		// Syntax error 5
 		}
+		FIN();
 		assignMatchingTypeCheck();
 	}
-
 	if (
 		currToken.getLexeme() != LEX_COMMA &&							// if the next lexeme is not a comma or a closing parenthese:
 		currToken.getLexeme() != LEX_RIGHT_PAREN
 		) {
-		syntaxError(													//   Syntax error 7
+		syntaxError(													//   Syntax error 6
 			"Expected ',' or ')'",
 			getNextPosition(prevToken)
 		);
@@ -181,7 +181,7 @@ void Parser::CODE_BLOCK()
 {
 	if (currToken.getLexeme() != LEX_LEFT_BRACE)						// if next lexeme is left brace:
 	{
-		syntaxError(													//   Syntax error 8
+		syntaxError(													//   Syntax error 7
 			"Expected '{'",
 			getNextPosition(prevToken)
 		);
@@ -193,7 +193,7 @@ void Parser::CODE_BLOCK()
 		STMNT();														// analyse current statement
 		if (currToken.getLexeme() == LEX_FIN)							// if the code has ended without closing the code body
 		{
-			syntaxError("Expected '}'", currToken);						//   Syntax error 9
+			syntaxError("Expected '}'", currToken);						//   Syntax error 8
 		}
 	}
 	getToken();
@@ -209,7 +209,7 @@ void Parser::STMNT()
 		getToken();
 		if (currToken.getLexeme() != LEX_ID)								// if the lexeme is not an identifier:	
 		{
-			syntaxError(													//   Syntax error 10
+			syntaxError(													//   Syntax error 4
 				"Expected variable name",
 				getNextPosition(prevToken)
 			);
@@ -217,7 +217,7 @@ void Parser::STMNT()
 		int idTableIndex = currToken.getValue();
 		if (lexer.tables.ids[idTableIndex].isDeclared())
 		{
-			semanticError(
+			semanticError(													// Semantic error 1
 				"Variable '" + lexer.tables.ids[idTableIndex].getName() + "' has already been declared",
 				currToken
 			);
@@ -242,7 +242,7 @@ void Parser::STMNT()
 			getToken();
 			if (currToken.getLexeme() != LEX_LEFT_PAREN)
 			{
-				syntaxError(												// Syntax error 11
+				syntaxError(												// 'if' Syntax error 1
 					"In 'if' statement: Expected '(' after 'if'",
 					getNextPosition(prevToken)
 				);
@@ -252,7 +252,7 @@ void Parser::STMNT()
 			conditionTypeCheck();
 			if (currToken.getLexeme() != LEX_RIGHT_PAREN)
 			{
-				syntaxError(												// Syntax error 12
+				syntaxError(												// 'if' Syntax error 2
 					"In 'if' statement: Expected ')'",
 					getNextPosition(prevToken)
 				);
@@ -270,7 +270,7 @@ void Parser::STMNT()
 			getToken();
 			if (currToken.getLexeme() != LEX_LEFT_PAREN)
 			{
-				syntaxError(												// Syntax error 13
+				syntaxError(												// 'while' Syntax error 1
 					"In 'while' statement: Expected '(' after 'while'",
 					getNextPosition(prevToken)
 				);
@@ -281,7 +281,7 @@ void Parser::STMNT()
 
 			if (currToken.getLexeme() != LEX_RIGHT_PAREN)
 			{
-				syntaxError(												// Syntax error 14
+				syntaxError(												// 'while' Syntax error 2
 					"In 'while' statement: Expected ')'",
 					getNextPosition(prevToken)
 				);
@@ -296,7 +296,7 @@ void Parser::STMNT()
 
 			if (currToken.getLexeme() != LEX_WHILE)
 			{
-				syntaxError(												// Syntax error 15
+				syntaxError(												// 'do' Syntax error 1
 					"In 'do' statement: Expected 'while'",
 					getNextPosition(prevToken)
 				);
@@ -304,7 +304,7 @@ void Parser::STMNT()
 			getToken();
 			if (currToken.getLexeme() != LEX_LEFT_PAREN)
 			{
-				syntaxError(												// Syntax error 16
+				syntaxError(												// 'do' Syntax error 2
 					"In 'do' statement: Expected '(' after 'while'",
 					getNextPosition(prevToken)
 				);
@@ -315,7 +315,7 @@ void Parser::STMNT()
 
 			if (currToken.getLexeme() != LEX_RIGHT_PAREN)
 			{
-				syntaxError(												// Syntax error 17
+				syntaxError(												// 'do' Syntax error 3
 					"In 'do' statement: Expected ')'",
 					getNextPosition(prevToken)
 				);
@@ -329,7 +329,7 @@ void Parser::STMNT()
 			getToken();
 			if (currToken.getLexeme() != LEX_LEFT_PAREN)
 			{
-				syntaxError(												// Syntax error 19
+				syntaxError(												// 'for' Syntax error 1
 					"In 'for' statement: Expected '(' after 'for'",
 					getNextPosition(prevToken)
 				);
@@ -359,7 +359,7 @@ void Parser::STMNT()
 				conditionTypeCheck();
 				if (currToken.getLexeme() != LEX_SEMICOLON)
 				{
-					syntaxError(											// Syntax error 20
+					syntaxError(											// 'for' Syntax error 2
 						"In 'for' statement: Expected ';' between last two statements",
 						currToken
 					);
@@ -377,7 +377,7 @@ void Parser::STMNT()
 				EXPR();
 				if (currToken.getLexeme() != LEX_RIGHT_PAREN)
 				{
-					syntaxError(											// Syntax error 21
+					syntaxError(											// 'for'Syntax error 3
 						"In 'for' statement: Expected ')'",
 						getNextPosition(prevToken)
 					);
@@ -391,7 +391,7 @@ void Parser::STMNT()
 			getToken();
 			if (currToken.getLexeme() != LEX_LEFT_PAREN)
 			{
-				syntaxError(												// Syntax error 22
+				syntaxError(												// Output syntax error 2
 					"In 'scanf' statement: Expected '(' after 'scanf'",
 					getNextPosition(prevToken)
 				);
@@ -399,7 +399,7 @@ void Parser::STMNT()
 			getToken();
 			if (currToken.getLexeme() != LEX_QUOTE_DOUBLE)
 			{
-				syntaxError(												// Syntax error 23
+				syntaxError(												// Output syntax error 3
 					"In 'scanf' statement: Expected string constant as format",
 					currToken
 				);
@@ -416,7 +416,7 @@ void Parser::STMNT()
 			{
 				if (currToken.getLexeme() != LEX_COMMA)
 				{
-					syntaxError(											// Syntax error 24
+					syntaxError(											// Output syntax error 4
 						"In 'scanf' statement: Expected ','",
 						getNextPosition(prevToken)
 					);
@@ -427,7 +427,7 @@ void Parser::STMNT()
 				currLex = currToken.getLexeme();
 				if (currLex != LEX_ID)
 				{
-					syntaxError(											// Syntax error 24
+					syntaxError(											// Output syntax error 5
 						"In 'scanf' statement: Expected variable of matching type",
 						currToken
 					);
@@ -435,8 +435,8 @@ void Parser::STMNT()
 				currLex = lexer.tables.ids[currToken.getValue()].getDataType();
 				if (currLex != inputVarType)
 				{
-					syntaxError(											// Syntax error 25
-						"In 'scanf' statement: Input argument " + to_string(count) + " has a wrong format",
+					syntaxError(											// Output syntax error 6
+						"In 'scanf' statement: Input argument " + to_string(count) + " has wrong format",
 						currToken
 					);
 				}
@@ -445,7 +445,7 @@ void Parser::STMNT()
 			}
 			if (currToken.getLexeme() != LEX_RIGHT_PAREN)
 			{
-				syntaxError(												// Syntax error 26
+				syntaxError(												// Output syntax error 7
 					"In 'scanf' statement: Expected ')'",
 					getNextPosition(prevToken)
 				);
@@ -457,11 +457,11 @@ void Parser::STMNT()
 
 		case LEX_PRINT:	case LEX_PRINTF:									// print() and printf() operators
 		{
-			string expr = currToken.getLexeme() == LEX_PRINT ? "'print'" : "'printf'";
+			string expr = currToken.getLexeme() == LEX_PRINT ? "print" : "printf";
 			getToken();
 			if (currToken.getLexeme() != LEX_LEFT_PAREN)
 			{
-				syntaxError(												// Syntax error 27
+				syntaxError(												// Output syntax error 8
 					"In '" + expr + "' statement: Expected '(' after '" + expr + "'",
 					getNextPosition(prevToken)
 				);
@@ -469,14 +469,14 @@ void Parser::STMNT()
 			getToken();
 			if (currToken.getLexeme() == LEX_RIGHT_PAREN)
 			{
-				syntaxError(												// Syntax error 28
+				syntaxError(												// Output syntax error 9
 					"In '" + expr + "' statement: No arguments found",
 					currToken
 				);
 			}
 			else if (currToken.getLexeme() != LEX_QUOTE_DOUBLE)
 			{
-				syntaxError(												// Syntax error 29
+				syntaxError(												// Output syntax error 10
 					"In '" + expr + "' statement: Expected string constant as format",
 					currToken
 				);
@@ -493,7 +493,7 @@ void Parser::STMNT()
 			{
 				if (currToken.getLexeme() != LEX_COMMA)
 				{
-					syntaxError(											// Syntax error 30
+					syntaxError(											// Output syntax error 11
 						"In '" + expr + "' statement: Expected ','",
 						getNextPosition(prevToken)
 					);
@@ -504,7 +504,7 @@ void Parser::STMNT()
 				currLex = currToken.getLexeme();
 				if (currLex != LEX_ID)
 				{
-					syntaxError(											// Syntax error 31
+					syntaxError(											// Output syntax error 12
 						"In '" + expr + "' statement: Expected variable of matching type",
 						currToken
 					);
@@ -512,8 +512,8 @@ void Parser::STMNT()
 				currLex = lexer.tables.ids[currToken.getValue()].getDataType();
 				if (currLex != inputVarType)
 				{
-					syntaxError(											// Syntax error 32
-						"In '" + expr + "' statement: Input argument " + to_string(count) + " has a wrong format",
+					syntaxError(											// Output syntax error 13
+						"In '" + expr + "' statement: Output argument " + to_string(count) + " has wrong format",
 						currToken
 					);
 				}
@@ -522,7 +522,7 @@ void Parser::STMNT()
 			}
 			if (currToken.getLexeme() != LEX_RIGHT_PAREN)
 			{
-				syntaxError(												// Syntax error 33
+				syntaxError(												// Output syntax error 14
 					"In '" + expr + "' statement: Expected ')'",
 					getNextPosition(prevToken)
 				);
@@ -559,11 +559,38 @@ void Parser::STMNT()
 // Assignment statement analysis
 void Parser::ASSIGN()
 {
-	if (currToken.getLexeme() != LEX_ID)
+	if (isDataType(currToken.getLexeme()))
 	{
-		EXPR();
+		auto dataType = currToken.getLexeme();								// save the type of variable to be described further (to assing a value of the same type when required)
+		idTypeStack.push(dataType);
+		getToken();
+		if (currToken.getLexeme() != LEX_ID)								// if the lexeme is not an identifier:	
+		{
+			syntaxError(													//   Syntax error 4
+				"Expected variable name",
+				getNextPosition(prevToken)
+			);
+		}
+		int idTableIndex = currToken.getValue();
+		if (lexer.tables.ids[idTableIndex].isDeclared())
+		{
+			semanticError(													// Semantic error 1
+				"Variable '" + lexer.tables.ids[idTableIndex].getName() + "' has already been declared",
+				currToken
+			);
+		}
+		lexer.tables.ids[idTableIndex].setIdType(STD_VAR);
+		setDataTypeForId();													// assign this identifier its data type (recently saved in tokens stack)
+		getToken();
+		if (currToken.getLexeme() == LEX_ASSIGN)							// if the identifier above is being assigned a constant value
+		{
+			getToken();
+			EXPR();
+			assignMatchingTypeCheck();
+		}
+		tokenStack.pop();													// analyze the variable
 	}
-	else
+	else if (currToken.getLexeme() == LEX_ID)
 	{
 		idDeclaredCheck(currToken);
 		int idTableIndex = currToken.getValue();
@@ -584,6 +611,10 @@ void Parser::ASSIGN()
 			EXPR();
 		}
 	}
+	else
+	{
+		EXPR();
+	}
 	missingSemicolonCheck();
 	getToken();
 }
@@ -596,8 +627,8 @@ void Parser::EXPR()
 		currToken.getLexeme() == LEX_ASSIGN ||
 		currToken.getLexeme() >= LEX_PLUS_ASSIGN && currToken.getLexeme() <= LEX_SLASH_ASSIGN
 		) {
-		syntaxError(													// Syntax error 35
-			"Lvalue required as a left operand of assignment",
+		syntaxError(													// Syntax error 9
+			"Lvalue required as left operand of assignment",
 			prevToken
 		);
 	}
@@ -709,8 +740,8 @@ void Parser::FIN()
 		getToken();
 		if (currToken.getLexeme() != LEX_ID)
 		{
-			syntaxError(													// Syntax error 36
-				"Lvalue required as an increment operand",
+			syntaxError(													// Syntax error 10
+				"Lvalue required as increment operand",
 				currToken
 			);
 		}
@@ -742,13 +773,13 @@ void Parser::FIN()
 		EXPR();
 		if (currToken.getLexeme() != LEX_RIGHT_PAREN)
 		{
-			syntaxError("Expected ')'", getNextPosition(prevToken));		// Syntax error 37
+			syntaxError("Expected ')'", getNextPosition(prevToken));		// Syntax error 11
 		}
 		getToken();
 		break;
 
 	default:
-		syntaxError("No matching operand found", currToken);				// Syntax error 38
+		syntaxError("No matching operand found", currToken);				// Syntax error 12
 		break;
 	}
 }
@@ -780,7 +811,10 @@ void Parser::idDeclaredCheck(Token idLex)
 	else																	// else:
 	{
 		auto idName = lexer.tables.ids[tableIndex].getName();
-		semanticError("Variable '" + idName + "' has not been declared", idLex);//   Semantic error
+		semanticError(														//   Semantic error 2
+			"Variable '" + idName + "' has not been declared", 
+			idLex
+		);
 		tokenStack.push(LEX_VOID);
 	}
 }
@@ -792,9 +826,7 @@ void Parser::idsUsedCheck()
 	{
 		if (id.isDeclared() && !id.isUsed())
 		{
-			semanticWarning(
-				"Variable '" + id.getName() + "' declared but not used"
-			);
+			semanticWarning("Variable '" + id.getName() + "' declared but not used");// Semantic warning
 		}
 	}
 }
@@ -826,7 +858,10 @@ void Parser::singleOperationCheck()
 		}
 		else
 		{
-			semanticError("Invalid operator for variables of type 'char*'", oper);
+			semanticError(													// Semantic error 3
+				"Invalid operator for variables of type 'char*'", 
+				oper
+			);
 		}
 	}
 	else
@@ -857,7 +892,7 @@ void Parser::singleOperationCheck()
 	}
 	else
 	{
-		semanticError("Data types in the operation do not match", opRight);
+		semanticError("Data types of the operands do not match", opRight);	// Semantic error 4
 	}
 }
 
@@ -869,7 +904,7 @@ void Parser::unaryOperationCheck()
 		operand != LEX_FLOAT &&
 		operand != LEX_DOUBLE
 		) {
-		semanticError("Invalid data type for unary operation", operand);	//   semantic error
+		semanticError("Invalid data type for unary expression", operand);	//   Semantic error 5
 	}
 }
 
@@ -878,7 +913,7 @@ void Parser::incrementCheck()
 	lexeme operand = tokenStack.top();
 	if (operand != LEX_INT)													// if the type of the operand is not integer:
 	{
-		semanticError("Increment only allows int data type", operand);		//   semantic error
+		semanticError("Increment only allowed on 'int' variable", operand);	//   Semantic error 6
 	}
 }
 
@@ -888,7 +923,7 @@ void Parser::notOperatorCheck()
 	lexeme operand = tokenStack.top();
 	if (operand != LEX_BOOL)
 	{
-		semanticError("'!' statement only allows bool data type", operand);
+		semanticError("'!' only allowed on 'bool' data type", operand);			// Semantic error 7
 	}
 }
 
@@ -903,9 +938,13 @@ void Parser::assignMatchingTypeCheck()
 		tokenStack.top() == LEX_DOUBLE && valueType == LEX_FLOAT ||			//     assigning float to double
 		tokenStack.top() == LEX_FLOAT && valueType == LEX_DOUBLE			//     assigning double to float
 		);
+
 	if (tokenStack.top() != valueType && !exception)
 	{
-		semanticError("Assigned data type does not match", valueType);
+		semanticError(														// Semantic error 8
+			"Data types of the assignment operands do not match",
+			valueType
+		);
 	}
 }
 
@@ -918,7 +957,10 @@ void Parser::conditionTypeCheck()
 	}
 	else
 	{
-		semanticError("The conditional expression must be bool", tokenStack.top());
+		semanticError(														// Semantic error 9
+			"Conditional statement must be of 'bool' data type", 
+			tokenStack.top()
+		);
 	}
 }
 
@@ -927,8 +969,8 @@ void Parser::returnCheck()
 	lexeme valueType = tokenStack.top();
 	if (valueType != funcType)
 	{
-		semanticError(
-			"Data type of the returned value does not match the function type",
+		semanticError(														// Semantic error 10
+			"Return type does not match function type",
 			currToken
 		);
 	}
@@ -939,8 +981,6 @@ void Parser::getToken()
 {
 	prevToken = currToken;
 	currToken = sourceCode.at(currTokenIndex);
-	//currToken = lexer.makeToken();
-	//sourceCode.push_back(currToken);
 
 	currTokenIndex++;
 	currPos = currToken.getEndPosition();
@@ -958,7 +998,7 @@ void Parser::missingSemicolonCheck()
 {
 	if (currToken.getLexeme() != LEX_SEMICOLON)
 	{
-		syntaxError(													//   Syntax error 39
+		syntaxError(													//   Syntax error 13
 			"Expected ';'",
 			getNextPosition(prevToken)
 		);
