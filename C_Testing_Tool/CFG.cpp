@@ -180,7 +180,7 @@ void CFGBuilder::breakdownBranch(CodeLine cnd, int branchId)
 
     isBranch = true;                                            // Set the CFG state to a branch
     getToken();
-    int prevBranch = 0;
+    int prevBranchEndId = 0;
     bool endsWithBranchOrLoop = false;
     prevId = 0;
     if (currLex == LEX_LEFT_BRACE)
@@ -189,7 +189,7 @@ void CFGBuilder::breakdownBranch(CodeLine cnd, int branchId)
     }
     else
     {
-        prevBranch = currId;
+        prevBranchEndId = currId;
         endsWithBranchOrLoop = breakdownSingleLine();
     }
 
@@ -197,7 +197,8 @@ void CFGBuilder::breakdownBranch(CodeLine cnd, int branchId)
     getToken();
     if (currLex == LEX_ELSE)                                   // If there is a negative branch:
     {
-        prevBranch = prevBranch == 0 ? currId - 1 : prevBranch;
+        int elseStartId = currId;
+        prevBranchEndId = prevBranchEndId == 0 ? elseStartId - 1 : prevBranchEndId;
         isBranch = true;
         prevId = branchId;                                     // Reset the previous node to a branch
         getToken();
@@ -211,12 +212,24 @@ void CFGBuilder::breakdownBranch(CodeLine cnd, int branchId)
         }
         prevId = 0;
 
-        // If the previous branch did not finish with branching or looping
-        if (!endsWithBranchOrLoop)
+        // In case of nested conditions
+        for (auto& edge : potentialEdges)
         {
-            // Add a potential edge leading from the final node of the previous branch to the following code line
-            potentialEdges.push_back(make_tuple(prevBranch, currId, CodeLine{}));
+            // If there was a nested condition, the potential edge from its branches
+            // will erroneously lead to the start of this "else" branch.
+            // Replace the "else" start node with node after the "else" branch is finished
+            if (get<1>(edge) == elseStartId)
+            {
+                get<1>(edge) = currId;
+            }
         }
+
+        // If the previous branch did not finish with branching or looping
+        //if (!endsWithBranchOrLoop)
+        //{
+        // Add a potential edge leading from the final node of the previous branch to the following code line
+        potentialEdges.push_back(make_tuple(prevBranchEndId, currId, CodeLine{}));
+        //}
     }
     else
     {
@@ -245,35 +258,17 @@ void CFGBuilder::breakdownEntryLoop(CodeLine cnd, int branchId)
         breakdownSingleLine();
     }
 
-    /*
-    if (!potentialEdges.empty())
+    for (auto& edge : potentialEdges)
     {
-        auto latestEdge = potentialEdges.top();
-        int idFrom = get<0>(latestEdge);
-        int idTo = get<1>(latestEdge);
-        auto latestEdgeCnd = get<2>(latestEdge);
+        int idFrom = get<0>(edge);
+        int idTo = get<1>(edge);
+        auto latestEdgeCnd = get<2>(edge);
 
-        // if the latest edge in the stack is an 'if' condition skip
+        // if there are any edges in the stack with an 'if' condition skip
         if (!cnd.empty() && idTo == currId)
         {
-            int idTo = branchId;
-            potentialEdges.pop();
-            potentialEdges.push(make_tuple(idFrom, idTo, latestEdgeCnd));
-        }
-    }
-    */
-    if (!potentialEdges.empty())
-    {
-        auto latestEdge = potentialEdges.back();
-        int idFrom = get<0>(latestEdge);
-        int idTo = get<1>(latestEdge);
-        auto latestEdgeCnd = get<2>(latestEdge);
-
-        // if the latest edge in the stack is an 'if' condition skip
-        if (!cnd.empty() && idTo == currId)
-        {
-            int idTo = branchId;
-            potentialEdges.back() = make_tuple(idFrom, idTo, latestEdgeCnd);
+			// Replace the node outside of the loop with the loop's branch node
+            get<1>(edge) = branchId;
         }
     }
     potentialEdges.push_back(make_tuple(branchId, currId, extractFromCndStack()));
@@ -445,12 +440,12 @@ bool CFGBuilder::breakdownSingleLine()
     return endsWithBranchOrLoop;
 }
 
-CFGBuilder::CFGBuilder(string fileName) : parser(fileName)
+CFGBuilder::CFGBuilder(vector<Token> sourceCode)
 {
     currId = 1;
     isBranch = false;
 
-    vector<Token> code = parser.analyze().sourceCode;
+    vector<Token> code = sourceCode;
     codeBody = eraseFunctionHeader(code);
 }
 

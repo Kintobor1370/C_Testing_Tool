@@ -18,7 +18,7 @@ void SymbolicContext::importVars(vector<Identifier> ids)
         idType id_type = ids.at(idIndex).getIdType();
         if (id_type == STD_VAR || id_type == INPUT_VAR)
         {
-            std::string varName = "var" + std::to_string(idIndex);
+            std::string varName = ids.at(idIndex).getName();
             lexeme dataType = ids.at(idIndex).getDataType();
             expr varExpr = ctx.int_const(varName.c_str());
             switch (dataType)
@@ -29,6 +29,10 @@ void SymbolicContext::importVars(vector<Identifier> ids)
 
             case LEX_BOOL:
                 varExpr = ctx.bool_const(varName.c_str());
+                break;
+
+            case LEX_CHAR: case LEX_STRING:
+                varExpr = ctx.string_const(varName.c_str());
                 break;
 
             default:
@@ -188,6 +192,34 @@ void Solver::ungetLexeme(const std::vector<Token>& line, int& index, lexeme& typ
     }
 }
 
+void Solver::solveStatement(const std::vector<Token>& code, solver& solver)
+{
+    // reset index to start parsing codeline from the first token
+    int index = 0;
+	lexeme type = LEX_NULL;
+    
+    auto codeIt = std::find_if(
+        code.begin(),
+        code.end(),
+        [](Token lex)
+        {
+            return (
+                lex.getLexeme() == LEX_ASSIGN ||
+                lex.getLexeme() >= LEX_INT && lex.getLexeme() <= LEX_STRING ||
+                lex.getLexeme() >= LEX_PLUS_ASSIGN && lex.getLexeme() <= LEX_SLASH_ASSIGN
+            );
+        }
+    );
+    if (codeIt != code.end())
+    {
+        solveAssign(code, index, type);
+    }
+    else
+    {
+        EXPR(code, index, type);
+    }
+}
+
 void Solver::solveAssign(const std::vector<Token>& code, int& index, lexeme& type)
 {
     Token lex = getLexeme(code, index, type);
@@ -205,23 +237,23 @@ void Solver::solveAssign(const std::vector<Token>& code, int& index, lexeme& typ
         switch (type)
         {
         case LEX_ASSIGN:
-            sym.setExpr(idVal, STMNT(code, index, type));
+            sym.setExpr(idVal, EXPR(code, index, type));
             break;
 
         case LEX_PLUS_ASSIGN:
-            sym.setExpr(idVal, sym.getExpr(idVal) + STMNT(code, index, type));
+            sym.setExpr(idVal, sym.getExpr(idVal) + EXPR(code, index, type));
             break;
 
         case LEX_MINUS_ASSIGN:
-            sym.setExpr(idVal, sym.getExpr(idVal) - STMNT(code, index, type));
+            sym.setExpr(idVal, sym.getExpr(idVal) - EXPR(code, index, type));
             break;
 
         case LEX_TIMES_ASSIGN:
-            sym.setExpr(idVal, sym.getExpr(idVal) * STMNT(code, index, type));
+            sym.setExpr(idVal, sym.getExpr(idVal) * EXPR(code, index, type));
             break;
 
         case LEX_SLASH_ASSIGN:
-            sym.setExpr(idVal, sym.getExpr(idVal) / STMNT(code, index, type));
+            sym.setExpr(idVal, sym.getExpr(idVal) / EXPR(code, index, type));
             break;
 
         default:
@@ -236,7 +268,7 @@ void Solver::solveAssign(const std::vector<Token>& code, int& index, lexeme& typ
                 break;
 
             case LEX_CHAR:
-                //sym.setExpr(idVal, sym.ctx.string_val(DEFAULT_CHAR_VALUE));
+                sym.setExpr(idVal, sym.ctx.string_val(std::string(1, DEFAULT_CHAR_VALUE)));
                 break;
             }
             break;
@@ -252,7 +284,7 @@ expr Solver::solveCondition(const std::vector<Token>& cnd)
     getLexeme(cnd, index, type);
     if (type == LEX_LEFT_PAREN)
     {
-        cndExpr = STMNT(cnd, index, type);
+        cndExpr = EXPR(cnd, index, type);
     }
     return cndExpr;
 }
@@ -287,15 +319,12 @@ void Solver::solveLoop(const Path& path, solver& solver, int& currNodeIndex)
         solver.pop();                                   // erase temporary expression
 
         Path loopBodyPath{};
-        /*
-        cout << "Loop body: ";
+        
         for (int k = currNodeIndex + 1; k < loopEndIndex; k++)
         {
             loopBodyPath.push_back(path.at(k));
-            cout << loopBodyPath.at(k - currNodeIndex - 1).id << "  ";
         }
-        cout << "\n";
-        */
+
         currNodeIndex = loopEndIndex;
         while (loopIter < maxIterForLoops && loopCondSat)
         {
@@ -304,12 +333,14 @@ void Solver::solveLoop(const Path& path, solver& solver, int& currNodeIndex)
             loopCndExpr = solveCondition(cnd);
             solver.push();
             solver.add(loopCndExpr);
-            loopCondSat = solver.check() == unsat;
+            loopCondSat = solver.check() == sat;
             solver.pop();
             loopIter++;
         }
-        expr finalLoopCndExpr = loopIter < maxIterForLoops ? !loopCndExpr : sym.ctx.bool_val(false);
-        solver.add(finalLoopCndExpr);
+        if (loopIter == maxIterForLoops)
+        {
+            solver.add(sym.ctx.bool_val(false));
+        }
     }
     else
     {
@@ -319,7 +350,7 @@ void Solver::solveLoop(const Path& path, solver& solver, int& currNodeIndex)
     }
 }
 
-expr Solver::STMNT(const std::vector<Token>& line, int& currIndex, lexeme& currType)
+expr Solver::EXPR(const std::vector<Token>& line, int& currIndex, lexeme& currType)
 {
     expr stmntExpr = DISJ(line, currIndex, currType);
     executeUnaryOperations();
@@ -433,25 +464,25 @@ expr Solver::FIN(const std::vector<Token>& line, int& currIndex, lexeme& currTyp
 {
     int lexValue;
     expr finExpr = sym.ctx.int_val(0); // default
-    Token currLex = getLexeme(line, currIndex, currType);
+    Token currToken = getLexeme(line, currIndex, currType);
     switch (currType)
     {
     case LEX_NOT:
-        currLex = getLexeme(line, currIndex, currType);
+        currToken = getLexeme(line, currIndex, currType);
         if (currType == LEX_LEFT_PAREN)
         {
-            finExpr = !STMNT(line, currIndex, currType);
+            finExpr = !EXPR(line, currIndex, currType);
         }
         else
         {
-            lexValue = currLex.getValue();
+            lexValue = currToken.getValue();
             finExpr = !sym.getExpr(lexValue);
         }
         getLexeme(line, currIndex, currType);
         break;
 
     case LEX_LEFT_PAREN:
-        finExpr = STMNT(line, currIndex, currType);
+        finExpr = EXPR(line, currIndex, currType);
         break;
 
     case LEX_PLUS:
@@ -463,38 +494,38 @@ expr Solver::FIN(const std::vector<Token>& line, int& currIndex, lexeme& currTyp
         break;
 
     case LEX_PLUS_PLUS:
-        currLex = getLexeme(line, currIndex, currType);
-        lexValue = currLex.getValue();
+        currToken = getLexeme(line, currIndex, currType);
+        lexValue = currToken.getValue();
         finExpr = sym.getExpr(lexValue) + sym.ctx.int_val(1);
         sym.setExpr(lexValue, finExpr);
         checkUnaryOperation(line, currIndex, currType, lexValue);
         break;
 
     case LEX_MINUS_MINUS:
-        currLex = getLexeme(line, currIndex, currType);
-        lexValue = currLex.getValue();
+        currToken = getLexeme(line, currIndex, currType);
+        lexValue = currToken.getValue();
         finExpr = sym.getExpr(lexValue) - sym.ctx.int_val(1);
         sym.setExpr(lexValue, finExpr);
         checkUnaryOperation(line, currIndex, currType, lexValue);
         break;
 
     case LEX_ID:
-        lexValue = currLex.getValue();
+        lexValue = currToken.getValue();
         finExpr = sym.getExpr(lexValue);
         checkUnaryOperation(line, currIndex, currType, lexValue);
         break;
 
     case LEX_NUM:
-        if (currLex.getValue() - (int)currLex.getValue() == 0)
+        if (currToken.getValue() - (int) currToken.getValue() == 0)
         {
-            lexValue = currLex.getValue();
+            lexValue = currToken.getValue();
             finExpr = sym.ctx.int_val(lexValue);
         }
         else
         {
-            double doubleVal = currLex.getValue();
+            double doubleVal = currToken.getValue();
             int numDigits = 0;
-            while (doubleVal - (int)doubleVal != 0)
+            while (doubleVal - (int) doubleVal != 0)
             {
                 doubleVal *= 10;
                 numDigits++;
@@ -512,6 +543,18 @@ expr Solver::FIN(const std::vector<Token>& line, int& currIndex, lexeme& currTyp
         finExpr = sym.ctx.bool_val(false);
         break;
 
+    case LEX_QUOTE_SINGLE:
+        currToken = getLexeme(line, currIndex, currType);
+        finExpr = sym.ctx.string_const(std::string(1, charConsts.at(currToken.getValue())).c_str());
+        getLexeme(line, currIndex, currType);
+        break;
+
+    case LEX_QUOTE_DOUBLE:
+		currToken = getLexeme(line, currIndex, currType);
+		finExpr = sym.ctx.string_const(strConsts.at(currToken.getValue()).c_str());
+        getLexeme(line, currIndex, currType);
+        break;
+
     default:
         break;
     }
@@ -520,6 +563,34 @@ expr Solver::FIN(const std::vector<Token>& line, int& currIndex, lexeme& currTyp
         getLexeme(line, currIndex, currType);
     }
     return finExpr;
+}
+
+// Get all possible paths in a loop
+void Solver::getAllLoopPaths(vector<Path>& loopPaths, CFG& cfg, int currNodeId, int loopStartNodeId, Path currPath)
+{
+    Node currNode = cfg.nodes[currNodeId];
+    currPath.push_back(currNode);
+
+    for (auto& edge : currNode.edges)
+    {
+        if (edge.idTarget != loopStartNodeId)
+        {
+            getAllLoopPaths(loopPaths, cfg, edge.idTarget, loopStartNodeId, currPath);
+        }
+        else
+        {
+            loopPaths.push_back(currPath);
+        }
+    }
+}
+
+bool Solver::checkLoopBody(Path body, z3::solver& solver)
+{
+    solver.push();
+    evaluatePathConstraints(body, solver);
+    auto isSat = solver.check() == sat;
+    solver.pop();
+    return isSat;
 }
 
 void Solver::checkUnaryOperation(const std::vector<Token>& line, int& currIndex, lexeme& currType, int idValue)
@@ -552,7 +623,13 @@ void Solver::executeUnaryOperations()
     unaryOpTable.clear();
 }
 
-Solver::Solver(CFG currCfg, vector<Identifier> ids, int maxIter) : cfg(currCfg), maxIterForLoops(maxIter), ids(ids)
+Solver::Solver(
+    CFG currCfg, 
+    std::vector<Identifier> ids,
+    std::vector<char> charConsts,
+    std::vector<string> strConsts,
+    int maxIter
+) : cfg(currCfg), maxIterForLoops(maxIter), ids(ids), strConsts(strConsts), charConsts(charConsts)
 {
     sym.importVars(ids);
 }
@@ -562,7 +639,24 @@ void Solver::setMaxIterForLoops(int newMaxIter)
     maxIterForLoops = newMaxIter;
 }
 
-TestCase Solver::evaluatePathConstraints(const Path& path, solver& solver, bool debugPrint = false)
+bool identicalPaths(const Path& path1, const Path& path2)
+{
+    if (path1.size() != path2.size())
+    {
+        return false;
+    }
+    for (int i = 0; i < path1.size(); i++)
+    {
+        if (path1.at(i).id != path2.at(i).id)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+
+TestCase Solver::evaluatePathConstraints(const Path& path, solver& solver, bool debugPrint)
 {
     expr returnVal = sym.ctx.int_val(DEFAULT_NUM_VALUE);
     for (int i = 0; i < path.size(); i++)
@@ -658,7 +752,7 @@ TestCase Solver::evaluatePathConstraints(const Path& path, solver& solver, bool 
             if (loopEndIndex > 0)
             {
                 int loopIter = 0;
-                auto cnd = node.edges[0].condition;
+                auto cnd = node.edges.front().condition;
                 expr cndExpr = solveCondition(cnd);
 
                 solver.push();          // save current state of the solver
@@ -670,10 +764,60 @@ TestCase Solver::evaluatePathConstraints(const Path& path, solver& solver, bool 
                 for (int k = i + 1; k < loopEndIndex; k++)
                 {
                     loopBodyPath.push_back(path[k]);
-                    cout << loopBodyPath.at(k - i - 1).id << "  ";
                 }
                 i = loopEndIndex;
-                cout << "\n";
+
+				bool requiredPathIsFeasible = false;
+
+				// Get all possible paths in the loop body
+                vector<Path> loopPaths{};
+                getAllLoopPaths(loopPaths, cfg, loopStartNodeId + 1, loopStartNodeId);
+                while (loopIter < maxIterForLoops && loopCondSat)
+                {
+					bool pathIsFeasible = checkLoopBody(loopBodyPath, solver);
+                    if (pathIsFeasible)
+                    {
+						requiredPathIsFeasible = true;
+                        evaluatePathConstraints(loopBodyPath, solver);
+
+                        // Increment
+                        if (!iteration.empty())
+                        {
+                            solveStatement(iteration, solver);
+                        }
+
+                        cndExpr = solveCondition(cnd);
+                        solver.push();
+                        solver.add(cndExpr);
+                        loopCondSat = solver.check() == sat;
+                        solver.pop();
+                    }
+                    else
+                    {
+                        int i = 0;
+                        while (i < loopPaths.size() && !pathIsFeasible)
+                        {
+							pathIsFeasible = checkLoopBody(loopPaths.at(i), solver);
+                            i++;
+                        }
+                        evaluatePathConstraints(loopPaths.at(i - 1), solver);
+                        
+                        // Increment
+                        if (!iteration.empty())
+                        {
+                            solveStatement(iteration, solver);
+                        }
+
+                        cndExpr = solveCondition(cnd);
+                        solver.push();
+                        solver.add(cndExpr);
+                        loopCondSat = solver.check() == sat;
+                        solver.pop();
+					}
+                    loopIter++;
+                }
+
+                /*
                 while (loopIter < maxIterForLoops && loopCondSat)
                 {
                     evaluatePathConstraints(loopBodyPath, solver);
@@ -697,7 +841,7 @@ TestCase Solver::evaluatePathConstraints(const Path& path, solver& solver, bool 
                         }
                         else
                         {
-                            STMNT(iteration, iterIndex, iterType);
+                            EXPR(iteration, iterIndex, iterType);
                         }
                     }
 
@@ -708,51 +852,33 @@ TestCase Solver::evaluatePathConstraints(const Path& path, solver& solver, bool 
                     solver.pop();
                     loopIter++;
                 }
-                if (loopIter == maxIterForLoops)
+                */
+                if (loopIter == maxIterForLoops || !requiredPathIsFeasible)
                 {
-                    cout << "MAX ITER REACHED\n";
                     solver.add(sym.ctx.bool_val(false));
                 }
             }
             else
             {
-                auto cnd = node.edges[1].condition;
+                auto cnd = node.edges.back().condition;
                 expr cndExpr = solveCondition(cnd);
                 solver.add(cndExpr);
             }
             break;
 
         case LEX_RETURN:
-            returnVal = STMNT(node.code, index, type);
+            returnVal = EXPR(node.code, index, type);
             break;
 
         default:
-            // reset index to start parsing codeline from the first lexeme
-            index = 0;
-            type = LEX_NULL;
-
-            codeIt = std::find_if(
-                node.code.begin(),
-                node.code.end(),
-                [](Token lex)
-                {
-                    return (
-                        lex.getLexeme() == LEX_ASSIGN ||
-                        lex.getLexeme() >= LEX_INT && lex.getLexeme() <= LEX_STRING ||
-                        lex.getLexeme() >= LEX_PLUS_ASSIGN && lex.getLexeme() <= LEX_SLASH_ASSIGN
-                        );
-                }
-            );
-            if (codeIt != node.code.end())
-            {
-                solveAssign(node.code, index, type);
-            }
-            else
-            {
-                STMNT(node.code, index, type);
-            }
+			solveStatement(node.code, solver);
             break;
         }
+        
+        if (solver.check() == unsat)
+        {
+            return TestCase();
+		}
     }
     bool isSat = solver.check() == sat;
 

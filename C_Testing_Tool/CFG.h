@@ -53,7 +53,6 @@ public:
 class CFGBuilder
 {
     vector<Token> codeBody;                                     // Source code body
-    Parser parser;
     CFG cfg;
 
     Token currToken;                                            // Current token
@@ -84,7 +83,7 @@ class CFGBuilder
     pair<CodeLine, CodeLine> breakdownForLoopParameters();
 
 public:
-    CFGBuilder(string fileName);
+    CFGBuilder(vector<Token> sourceCode);
 
     CFG buildCFG();
 };

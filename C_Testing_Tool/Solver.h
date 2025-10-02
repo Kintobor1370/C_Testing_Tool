@@ -67,6 +67,8 @@ class Solver
     CFG cfg;
     SymbolicContext sym;
     std::vector<Identifier> ids;
+    std::vector<char> charConsts;
+    std::vector<string> strConsts;
     std::vector<Path> paths;
     std::vector<TestCase> testSuite;
     std::vector <std::pair<int, lexeme>> unaryOpTable;
@@ -76,11 +78,12 @@ class Solver
     Token getLexeme(const std::vector<Token>& line, int& index, lexeme& type);
     void ungetLexeme(const std::vector<Token>& line, int& index, lexeme& type);
 
+	void solveStatement(const std::vector<Token>& code, solver& solver);
     void solveAssign(const std::vector<Token>& code, int& index, lexeme& type);
     expr solveCondition(const std::vector<Token>& cnd);
     void solveLoop(const Path& path, solver& solver, int& currNodeIndex);
 
-    expr STMNT(const std::vector<Token>& line, int& currIndex, lexeme& currType);
+    expr EXPR(const std::vector<Token>& line, int& currIndex, lexeme& currType);
     expr DISJ(const std::vector<Token>& line, int& currIndex, lexeme& currType);
     expr CONJ(const std::vector<Token>& line, int& currIndex, lexeme& currType);
     expr CMP(const std::vector<Token>& line, int& currIndex, lexeme& currType);
@@ -88,14 +91,16 @@ class Solver
     expr MULTI(const std::vector<Token>& line, int& currIndex, lexeme& currType);
     expr FIN(const std::vector<Token>& line, int& currIndex, lexeme& currType);
 
+    void getAllLoopPaths(vector<Path>& loopPaths, CFG& cfg, int currNodeId, int loopStartNodeId, Path currPath = {});
+    bool checkLoopBody(Path body, z3::solver& solver);
     void checkUnaryOperation(const std::vector<Token>& line, int& currIndex, lexeme& currType, int idValue);
     void executeUnaryOperations();
 
-    TestCase evaluatePathConstraints(const Path& path, solver& solver, bool debugPrint);
+    TestCase evaluatePathConstraints(const Path& path, solver& solver, bool debugPrint = false);
     void debugPrintPaths();
 
 public:
-    Solver(CFG currCfg, vector<Identifier> ids, int maxIter = 10);
+    Solver(CFG currCfg, std::vector<Identifier> ids, std::vector<char> charConsts, std::vector<string> strConsts, int maxIter = 10000);
 
     void setMaxIterForLoops(int newMaxIter);
 

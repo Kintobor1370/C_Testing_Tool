@@ -305,13 +305,18 @@ void CoverageAnalyzer::printTable(vector<TestCase> testSuite)
 CoverageAnalyzer::CoverageAnalyzer(string fileName, int maxIterForLoops)
 {
     Parser parser(fileName);
-    CFGBuilder builder(fileName);
 
     auto res = parser.analyze();
-    ids = res.tables.ids;
+
+	CFGBuilder builder(res.sourceCode);
     cfg = builder.buildCFG();
 
-    Solver solver(cfg, ids);
+    Solver solver(
+        cfg,
+        res.tables.ids,
+        res.tables.charConsts,
+        res.tables.strConsts
+    );
     pathsAndCasesTable = solver.getPathsAndCases();                     // Import all paths and models from the SMT solver
     std::sort(                                                          // Sort them by path length    
         pathsAndCasesTable.begin(),
