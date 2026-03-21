@@ -1,5 +1,5 @@
 # C Software Testing Tool
-A tool for testing C code functions.\
+A Windows console app for testing C code functions.\
 This app requires the Z3 library to run.\
 \
 _Tested on Windows 10 with Visual Studio 2022._
