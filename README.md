@@ -9,5 +9,5 @@ To run the testing tool on Windows:
 2. Download the latest 'x64-win' zip from the [official Z3 GitHub release page](https://github.com/Z3Prover/z3/releases)
 4. Create a 'z3' directory in the testing tool root, and extract all contents of the downloaded z3 zip archive there
 5. Create a 'x64\Debug' directory, copy the 'libz3.dll' and 'libz3.lib' files from the 'z3\bin' folder, and paste them into 'x64\Debug'
-6. Open 'C_Testing_Tool.sln'
+6. Open _C_Testing_Tool.sln_
 7. Press Ctrl + F5 to run the testing tool
