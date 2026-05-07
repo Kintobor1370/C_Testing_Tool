@@ -5,7 +5,7 @@ A console-based C code testing tool for Windows. This tool can:
 - Identify unreachable code segments
 - Produce bug reports and code coverage metrics
 
-This app requires the Z3 library to run.\
+This app requires the Z3 library to run.
 
 Examples of the testing tool output:
 - Lexical error detection <br> <img width="392" height="102" alt="source1" src="https://github.com/user-attachments/assets/7f809363-4df7-4564-9a11-b4746fe3e679" /> <br> <img width="632" height="108" alt="output1" src="https://github.com/user-attachments/assets/61f1ef64-db04-4932-be18-5e8d61120bb3" />
